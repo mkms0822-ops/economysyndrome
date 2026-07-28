@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1220">
+<meta name="description" content="車中泊・避難所でのエコノミークラス症候群（血栓症）を防ぐタイマー。時間がきたら音と声でお知らせし、足の動かし方をイラストで案内します。">
+<title>足うごかしタイマー｜エコノミークラス症候群の予防</title>
+<style>
+/* ============================================================
+   ★配布するときはここだけ書き換えてください
+   このファイルを置いたURL。空のままでも動きますが、
+   共有ボタンで正しいURLを配るために設定を推奨します。
+   ============================================================ */
+:root{
+  --bg:#0B1220; --panel:#141E33; --panel-2:#1B2842; --line:#26344F;
+  --ink:#EAF0FA; --ink-mid:#A8B8D4; --ink-dim:#6F82A3;
+  --flow:#4DD4C0; --signal:#F5A524; --alarm:#FF6B5A;
+  --r:14px;
+  --font: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg); color:var(--ink); font-family:var(--font);
+  font-size:17px; line-height:1.7; min-height:100vh; padding-bottom:env(safe-area-inset-bottom);}
+button{font-family:inherit; cursor:pointer; border:0;}
+.wrap{max-width:560px; margin:0 auto; padding:0 16px 48px;}
+
+.hdr{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:8px;
+  padding:14px 16px; padding-top:calc(14px + env(safe-area-inset-top));
+  background:rgba(11,18,32,.94); backdrop-filter:blur(8px); border-bottom:1px solid var(--line);}
+.hdr-t{flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.25;}
+.hdr-t b{font-size:17px; font-weight:800;}
+.hdr-t span{font-size:11px; color:var(--ink-dim); letter-spacing:.06em;}
+.ico{background:var(--panel-2); border:1px solid var(--line); color:var(--ink-mid);
+  width:40px; height:40px; flex:0 0 40px; border-radius:11px; font-size:17px;
+  display:flex; align-items:center; justify-content:center;}
+.ico:active{background:var(--line);}
+
+.stage{padding:24px 0 4px; text-align:center;}
+.ringbox{position:relative; width:258px; height:258px; margin:0 auto;}
+.ringbox svg{width:100%; height:100%; transform:rotate(-90deg);}
+.ring-bg{fill:none; stroke:var(--panel-2); stroke-width:13;}
+.ring-fg{fill:none; stroke:var(--flow); stroke-width:13; stroke-linecap:round;
+  transition:stroke-dashoffset .6s linear, stroke .3s;}
+.ring-fg.warn{stroke:var(--signal);}
+.pulse{fill:var(--flow);}
+.ring-inner{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+.lbl{font-size:12px; color:var(--ink-dim); letter-spacing:.16em;}
+.elapsed{font-size:46px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1;}
+.nextline{font-size:14px; color:var(--ink-mid); font-variant-numeric:tabular-nums;}
+.nextline b{color:var(--flow); font-weight:800;}
+.idlemsg{font-size:15px; color:var(--ink-mid); max-width:190px; margin:0 auto;}
+
+.actions{display:flex; flex-direction:column; gap:10px; margin-top:22px;}
+.btn{border-radius:var(--r); padding:17px 18px; font-size:18px; font-weight:800;
+  display:flex; align-items:center; justify-content:center; gap:9px; min-height:58px;}
+.btn-main{background:var(--flow); color:#062B26;}
+.btn-done{background:var(--signal); color:#3A2500;}
+.btn-sub{background:var(--panel); color:var(--ink); border:1px solid var(--line);}
+.btn:active{filter:brightness(.9);}
+.btn-ghost{background:transparent; color:var(--ink-dim); font-size:15px; font-weight:700; padding:12px; min-height:0;}
+
+.setrow{margin-top:20px; background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--r); padding:14px 16px;}
+.setrow h3{margin:0 0 10px; font-size:13px; color:var(--ink-dim); font-weight:700; letter-spacing:.1em;}
+.chips{display:flex; gap:8px;}
+.chip{flex:1; background:var(--panel-2); color:var(--ink-mid); border:1px solid var(--line);
+  border-radius:10px; padding:11px 4px; font-size:15px; font-weight:700;}
+.chip[aria-pressed="true"]{background:var(--flow); color:#062B26; border-color:var(--flow);}
+.toggle{display:flex; align-items:center; justify-content:space-between; margin-top:12px;
+  padding-top:12px; border-top:1px solid var(--line); font-size:15px; color:var(--ink-mid);}
+.sw{width:52px; height:30px; border-radius:999px; background:var(--panel-2);
+  border:1px solid var(--line); position:relative; transition:background .2s; flex:0 0 52px;}
+.sw::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px;
+  border-radius:50%; background:var(--ink-dim); transition:.2s;}
+.sw[aria-pressed="true"]{background:var(--flow); border-color:var(--flow);}
+.sw[aria-pressed="true"]::after{left:25px; background:#062B26;}
+
+.tally{margin-top:16px; background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--r); padding:14px 16px; font-size:14px; color:var(--ink-mid);}
+.tally b{color:var(--flow); font-size:19px; font-variant-numeric:tabular-nums;}
+
+.warncard{margin-top:16px; border-radius:var(--r); border:1px solid rgba(255,107,90,.4);
+  background:rgba(255,107,90,.08); padding:15px 16px;}
+.warncard h3{margin:0 0 8px; font-size:15px; color:var(--alarm); font-weight:800;}
+.warncard p{margin:0 0 8px; font-size:14px; color:var(--ink-mid); line-height:1.65;}
+.warncard p:last-child{margin-bottom:0;}
+.warncard strong{color:var(--ink);}
+
+.sheet{position:fixed; inset:0; z-index:50; display:none; background:rgba(6,10,18,.84);
+  backdrop-filter:blur(3px); align-items:flex-end; justify-content:center;}
+.sheet.open{display:flex;}
+.sheet-in{width:100%; max-width:560px; max-height:92vh; overflow-y:auto; background:var(--bg);
+  border-top:1px solid var(--line); border-radius:20px 20px 0 0;
+  padding:20px 18px calc(24px + env(safe-area-inset-bottom)); animation:rise .22s ease-out;}
+@keyframes rise{from{transform:translateY(16px);opacity:.4}to{transform:none;opacity:1}}
+.sheet-h{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+.sheet-h h2{margin:0; font-size:20px; font-weight:800;}
+
+.alert-eyebrow{display:inline-block; background:var(--signal); color:#3A2500; font-size:12px;
+  font-weight:800; letter-spacing:.14em; padding:5px 12px; border-radius:999px; margin-bottom:12px;}
+.ex-art{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:10px; margin-bottom:14px;}
+.ex-art svg{width:100%; height:auto; display:block;}
+.ex-name{font-size:25px; font-weight:800; margin:0 0 4px; line-height:1.35;}
+.ex-dose{font-size:15px; color:var(--signal); font-weight:800; margin:0 0 10px;}
+.ex-how{font-size:16px; color:var(--ink-mid); margin:0 0 18px; line-height:1.75;}
+
+.cl{display:flex; flex-direction:column; gap:8px; margin-bottom:8px;}
+.cl-item{display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:13px 14px;
+  color:var(--ink-mid); font-size:16px; font-weight:600;}
+.cl-item[aria-pressed="true"]{background:rgba(77,212,192,.12); border-color:var(--flow); color:var(--ink);}
+.tick{width:26px; height:26px; flex:0 0 26px; border-radius:8px; border:2px solid var(--line);
+  display:grid; place-items:center; font-size:15px; color:transparent; font-weight:900;}
+.cl-item[aria-pressed="true"] .tick{background:var(--flow); border-color:var(--flow); color:#062B26;}
+.hint{font-size:13px; color:var(--ink-dim); margin:6px 0 16px;}
+
+.day{margin-bottom:20px;}
+.day-h{display:flex; align-items:baseline; gap:10px; border-bottom:1px solid var(--line);
+  padding-bottom:7px; margin-bottom:10px;}
+.day-h b{font-size:17px; font-weight:800;}
+.day-h span{font-size:13px; color:var(--flow); font-weight:700;}
+.rec{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px;}
+.rec-t{font-size:13px; color:var(--ink-dim); font-variant-numeric:tabular-nums; margin-bottom:6px;}
+.tags{display:flex; flex-wrap:wrap; gap:6px;}
+.tag{background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 11px; font-size:13px; color:var(--ink-mid);}
+.empty{text-align:center; color:var(--ink-dim); padding:44px 10px; font-size:15px; line-height:1.9;}
+.sum{display:flex; gap:10px; margin-bottom:18px;}
+.sum div{flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; text-align:center;}
+.sum b{display:block; font-size:26px; font-weight:800; color:var(--flow); font-variant-numeric:tabular-nums;}
+.sum span{font-size:12px; color:var(--ink-dim);}
+
+.urlrow{display:flex; gap:8px; margin-top:6px;}
+.urlrow input{flex:1; min-width:0; background:var(--panel-2); border:1px solid var(--line);
+  color:var(--ink); border-radius:10px; padding:12px 13px; font-size:13px;}
+.urlnote{font-size:13px; color:var(--ink-dim); line-height:1.75; margin:14px 0 0;
+  background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;}
+
+.tut{position:fixed; inset:0; z-index:80; display:none; background:rgba(6,10,18,.95);
+  align-items:center; justify-content:center; padding:20px;}
+.tut.open{display:flex;}
+.tut-in{width:100%; max-width:400px; background:var(--panel); border:1px solid var(--flow);
+  border-radius:18px; padding:26px 22px; box-shadow:0 0 44px rgba(77,212,192,.16);}
+.tut-no{font-size:11px; letter-spacing:.2em; color:var(--flow); font-weight:800; margin-bottom:14px;}
+.tut-ic{font-size:46px; text-align:center; margin-bottom:14px;}
+.tut-t{font-size:20px; font-weight:800; margin:0 0 12px; text-align:center; line-height:1.4;}
+.tut-x{font-size:15px; color:var(--ink-mid); line-height:1.9; margin:0 0 20px;}
+.tut-dots{display:flex; gap:7px; justify-content:center; margin-bottom:18px;}
+.tut-dots i{width:8px; height:8px; border-radius:50%; background:var(--panel-2); border:1px solid var(--line);}
+.tut-dots i.on{background:var(--flow); border-color:var(--flow);}
+.tut-btns{display:flex; gap:9px;}
+.tut-btns button{flex:1; border-radius:11px; padding:14px; font-size:16px; font-weight:800;}
+
+.note{font-size:12px; color:var(--ink-dim); text-align:center; margin-top:22px; line-height:1.8;}
+@media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+@media (max-width:360px){.elapsed{font-size:40px;} .ringbox{width:228px; height:228px;} .ico{width:36px;height:36px;flex:0 0 36px;font-size:15px;}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-t">
+    <b>足うごかしタイマー</b>
+    <span>エコノミークラス症候群の予防</span>
+  </div>
+  <button class="ico" id="btnTut" aria-label="使い方">❓</button>
+  <button class="ico" id="btnShare" aria-label="共有">🔗</button>
+  <button class="ico" id="btnHistory" aria-label="記録">📋</button>
+</header>
+
+<div class="wrap">
+  <section class="stage">
+    <div class="ringbox">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="ring-bg" cx="100" cy="100" r="86"></circle>
+        <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="86" stroke-dasharray="540.35" stroke-dashoffset="540.35"></circle>
+        <circle class="pulse" id="pulseDot" cx="100" cy="14" r="0"></circle>
+      </svg>
+      <div class="ring-inner"><div id="ringContent">
+        <div class="idlemsg">じっとしている時間を計ります。<br>座ったら押してください。</div>
+      </div></div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="btn btn-main" id="btnStart">はじめる</button>
+    <button class="btn btn-done" id="btnComplete" style="display:none">動かした（記録する）</button>
+    <button class="btn-ghost" id="btnStop" style="display:none">今日はここまでにする</button>
+  </div>
+
+  <section class="setrow" id="setRow">
+    <h3>お知らせの間隔</h3>
+    <div class="chips" role="group" aria-label="お知らせの間隔">
+      <button class="chip" data-min="30" aria-pressed="false">30分</button>
+      <button class="chip" data-min="60" aria-pressed="true">1時間</button>
+      <button class="chip" data-min="90" aria-pressed="false">1時間半</button>
+    </div>
+    <div class="toggle">
+      <span>音声でお知らせ</span>
+      <button class="sw" id="swVoice" aria-pressed="true" aria-label="音声でお知らせ"></button>
+    </div>
+  </section>
+
+  <section class="tally" id="tally" style="display:none">
+    今回の予防：<b id="tallyN">0</b> 回　／　次のお知らせ <span id="tallyNext">—</span>
+  </section>
+
+  <section class="warncard">
+    <h3>こんなときは、すぐ受診してください</h3>
+    <p><strong>片方のふくらはぎが腫れる・痛む・赤くなる・熱をもつ</strong> → 血のかたまりができているサインです。医療機関へ。</p>
+    <p><strong>急に息が苦しい・胸が痛い・気を失いそう</strong> → 血のかたまりが肺に飛んだおそれ。ためらわず<strong>119番</strong>。</p>
+    <p>このアプリは予防を助けるだけのもので、診断はできません。</p>
+  </section>
+
+  <p class="note">
+    記録はこの端末の中だけに保存されます。<br>
+    通信は使いません。圏外でも使えます。
+  </p>
+</div>
+
+<!-- お知らせ -->
+<div class="sheet" id="sheetAlert" role="dialog" aria-modal="true" aria-labelledby="exName">
+  <div class="sheet-in">
+    <span class="alert-eyebrow" id="alertEyebrow"></span>
+    <div class="ex-art" id="exArt"></div>
+    <h2 class="ex-name" id="exName"></h2>
+    <p class="ex-dose" id="exDose"></p>
+    <p class="ex-how" id="exHow"></p>
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-done" id="btnAlertDone">やった（記録する）</button>
+      <button class="btn btn-sub" id="btnSnooze">あと5分だけ待つ</button>
+    </div>
+  </div>
+</div>
+
+<!-- チェックリスト -->
+<div class="sheet" id="sheetCheck" role="dialog" aria-modal="true">
+  <div class="sheet-in">
+    <div class="sheet-h"><h2>やったことを選ぶ</h2>
+      <button class="ico" id="checkClose" aria-label="閉じる">✕</button></div>
+    <div class="cl" id="checkList"></div>
+    <p class="hint">ひとつも選ばずに登録もできます。</p>
+    <button class="btn btn-main" id="btnSave">記録する</button>
+  </div>
+</div>
+
+<!-- つづける？ -->
+<div class="sheet" id="sheetNext" role="dialog" aria-modal="true">
+  <div class="sheet-in">
+    <div class="sheet-h"><h2>記録しました</h2></div>
+    <p class="ex-how" id="nextMsg"></p>
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-main" id="btnContinue">このまま予防を続ける</button>
+      <button class="btn btn-sub" id="btnFinish">終わりにする</button>
+    </div>
+  </div>
+</div>
+
+<!-- 記録 -->
+<div class="sheet" id="sheetHist" role="dialog" aria-modal="true">
+  <div class="sheet-in">
+    <div class="sheet-h"><h2>これまでの記録</h2>
+      <button class="ico" id="histClose" aria-label="閉じる">✕</button></div>
+    <div id="histBody"></div>
+  </div>
+</div>
+
+<!-- 共有 -->
+<div class="sheet" id="sheetShare" role="dialog" aria-modal="true">
+  <div class="sheet-in">
+    <div class="sheet-h"><h2>このツールを共有する</h2>
+      <button class="ico" id="shareClose" aria-label="閉じる">✕</button></div>
+    <p class="ex-how" style="margin-bottom:8px">
+      車中泊をされている方、ご家族、避難所を運営されている方へ。<br>下のURLを開けば、すぐこの画面が使えます。</p>
+    <div class="urlrow">
+      <input type="text" id="shareUrl" readonly>
+      <button class="btn btn-main" id="btnCopyUrl" style="min-height:0;padding:12px 18px;font-size:15px;flex:0 0 auto">コピー</button>
+    </div>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn btn-sub" id="btnShareNative">📤 他のアプリで共有する</button>
+      <button class="btn btn-sub" id="btnCopyText">📝 説明文つきでコピー</button>
+    </div>
+    <p class="urlnote" id="shareNote"></p>
+  </div>
+</div>
+
+<!-- チュートリアル -->
+<div class="tut" id="tut" role="dialog" aria-modal="true">
+  <div class="tut-in">
+    <div class="tut-no" id="tutNo"></div>
+    <div class="tut-ic" id="tutIc"></div>
+    <h2 class="tut-t" id="tutT"></h2>
+    <p class="tut-x" id="tutX"></p>
+    <div class="tut-dots" id="tutDots"></div>
+    <div class="tut-btns">
+      <button class="btn-sub" id="tutPrev" style="border:1px solid var(--line)">戻る</button>
+      <button class="btn-main" id="tutNext"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ★配布用の設定 ── ここだけ書き換えてください
+   このファイルを置いたURLを入れると、共有ボタンがそれを配ります。
+   空のままでも動きます（表示中のURLを使います）。
+   ============================================================ */
+var SHARE_URL = "";                                  // 例: "https://bousai0111.info/ashi.html"
+var FALLBACK_URL = "https://bousai0111.info/?ecs=1"; // 手元のファイルから開いたときの案内先
+
+/* ---------- 保存 ---------- */
+var KEY = "ashi_ugokashi_v1", TUTKEY = "ashi_tut_seen_v1";
+var memFallback = null;
+var storageOK = (function(){ try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; }catch(e){ return false; } })();
+function loadLogs(){ if(!storageOK) return memFallback||[]; try{ return JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ return []; } }
+function saveLogs(a){ if(!storageOK){ memFallback=a; return; } try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){ memFallback=a; } }
+
+/* ---------- 運動メニュー ---------- */
+var C={ink:"#A8B8D4",flow:"#4DD4C0",sig:"#F5A524",dim:"#3C4C6B"};
+function art(inner){
+  return '<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img">'+
+    '<style>.s{fill:none;stroke:'+C.ink+';stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}'+
+    '.a{fill:none;stroke:'+C.flow+';stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}'+
+    '.g{fill:none;stroke:'+C.dim+';stroke-width:3;stroke-linecap:round;stroke-dasharray:6 6}'+
+    '.ar{fill:none;stroke:'+C.sig+';stroke-width:3;stroke-linecap:round;stroke-linejoin:round}'+
+    '.fs{fill:'+C.ink+'}</style>'+inner+'</svg>';
+}
+var A_UP='<path class="ar" d="M0 0 l-6 7 M0 0 l6 7"/>';
+
+var MENU=[
+{id:"ankle",name:"足首を上下に動かす",dose:"20回",
+ how:"座ったまま、つま先を天井へ向けてグッと上げ、次にゆっくり下ろします。ふくらはぎのポンプが働いて、血液が心臓へ戻ります。いちばん大事な運動です。",
+ say:"足首を上下に、20回動かしましょう。つま先を上げて、下ろす。ふくらはぎのポンプを動かします。",
+ svg:art('<path class="s" d="M72 26 L96 96"/><path class="s" d="M96 96 L150 96"/><circle class="fs" cx="72" cy="26" r="7"/>'+
+  '<path class="g" d="M96 96 L142 66"/><path class="a" d="M96 96 L138 118"/>'+
+  '<path class="ar" d="M168 104 q22 -22 0 -44"/><g transform="translate(168,60) rotate(20)">'+A_UP+'</g>'+
+  '<path class="s" d="M232 40 L232 140" stroke-width="2.6"/>'+
+  '<text x="248" y="76" fill="'+C.sig+'" font-size="17" font-family="sans-serif" font-weight="700">上げる</text>'+
+  '<text x="248" y="122" fill="'+C.flow+'" font-size="17" font-family="sans-serif" font-weight="700">下ろす</text>')},
+{id:"heel",name:"かかとの上げ下げ",dose:"20回",
+ how:"足の裏を床につけたまま、かかとだけを持ち上げます。降ろすときはゆっくり。立った姿勢でも座ったままでもできます。",
+ say:"かかとの上げ下げを20回。かかとを持ち上げて、ゆっくり下ろします。",
+ svg:art('<path class="s" d="M40 150 L280 150"/><path class="s" d="M92 60 L92 128 L64 150 L128 150"/>'+
+  '<path class="a" d="M212 60 L212 122 L236 150 L188 150"/><path class="a" d="M212 122 L186 138"/>'+
+  '<path class="ar" d="M158 132 L158 78"/><g transform="translate(158,78)">'+A_UP+'</g>'+
+  '<text x="176" y="96" fill="'+C.sig+'" font-size="17" font-family="sans-serif" font-weight="700">かかとだけ</text>')},
+{id:"toes",name:"足の指をグー・パー",dose:"20回",
+ how:"足の指をギュッと握り、次に大きく開きます。靴を脱ぐとやりやすくなります。狭い車内でも音を立てずにできます。",
+ say:"足の指をグー、パー。20回くり返しましょう。",
+ svg:art('<path class="s" d="M56 118 q0 -34 34 -34 q28 0 28 26"/><path class="s" d="M56 118 q34 22 62 -8"/>'+
+  '<path class="s" d="M118 110 q10 12 2 20 M108 118 q10 12 2 20 M98 124 q10 12 2 18"/>'+
+  '<text x="70" y="160" fill="'+C.ink+'" font-size="17" font-family="sans-serif" font-weight="700">グー</text>'+
+  '<path class="a" d="M196 118 q0 -34 34 -34 q28 0 28 26"/><path class="a" d="M196 118 q34 22 62 -8"/>'+
+  '<path class="a" d="M258 110 L282 100 M250 122 L276 120 M240 130 L262 138"/>'+
+  '<text x="208" y="160" fill="'+C.flow+'" font-size="17" font-family="sans-serif" font-weight="700">パー</text>')},
+{id:"calf",name:"ふくらはぎをもむ",dose:"左右30秒ずつ",
+ how:"ふくらはぎを下から上へ、心臓に向かってやさしくさすります。強く揉みすぎないこと。痛みや腫れがある側は、さすらずに受診してください。",
+ say:"ふくらはぎを、下から上へ、やさしくさすりましょう。左右30秒ずつです。",
+ svg:art('<path class="s" d="M132 24 q34 30 30 66 q-4 34 -14 62"/><path class="s" d="M132 24 q-26 32 -22 68 q4 34 14 60"/>'+
+  '<path class="a" d="M96 118 q-14 -10 -6 -24 q8 -12 22 -6"/><path class="a" d="M170 118 q14 -10 6 -24 q-8 -12 -22 -6"/>'+
+  '<path class="ar" d="M228 140 L228 52"/><g transform="translate(228,52)">'+A_UP+'</g>'+
+  '<text x="244" y="100" fill="'+C.sig+'" font-size="17" font-family="sans-serif" font-weight="700">心臓へ</text>')},
+{id:"knee",name:"ひざを抱えて曲げ伸ばし",dose:"左右10回",
+ how:"片方のひざを両手で抱えて胸に引き寄せ、ゆっくり戻します。股関節とひざの裏がほぐれ、たまった血液が流れ出します。",
+ say:"ひざを抱えて、胸に引き寄せましょう。左右10回ずつです。",
+ svg:art('<circle class="fs" cx="96" cy="40" r="13"/><path class="s" d="M96 54 L96 108"/>'+
+  '<path class="a" d="M96 108 L146 92 L172 128"/><path class="s" d="M96 108 L150 130 L196 130"/>'+
+  '<path class="s" d="M96 70 q34 6 48 22"/>'+
+  '<path class="ar" d="M186 78 q-26 -20 -48 -6"/><g transform="translate(138,72) rotate(200)">'+A_UP+'</g>'+
+  '<text x="196" y="70" fill="'+C.sig+'" font-size="17" font-family="sans-serif" font-weight="700">胸へ</text>')},
+{id:"walk",name:"立ち上がって歩く",dose:"3分",
+ how:"いちばん効果があります。車の外に出て、少しでいいので歩いてください。夜間や足元が悪いときは、車のそばで足踏みでも大丈夫です。",
+ say:"立ち上がって、3分ほど歩きましょう。むずかしければ、その場で足踏みでもかまいません。",
+ svg:art('<path class="s" d="M30 152 L290 152"/><circle class="fs" cx="120" cy="36" r="13"/>'+
+  '<path class="a" d="M120 50 L120 100"/><path class="a" d="M120 100 L96 132 L78 152"/>'+
+  '<path class="a" d="M120 100 L152 128 L172 152"/><path class="s" d="M120 64 L92 92 M120 64 L154 84"/>'+
+  '<path class="ar" d="M200 60 L246 60"/><g transform="translate(246,60) rotate(90)">'+A_UP+'</g>'+
+  '<text x="196" y="104" fill="'+C.sig+'" font-size="17" font-family="sans-serif" font-weight="700">3分でいい</text>')},
+{id:"water",name:"水を飲む",dose:"コップ1杯（200ml）",
+ how:"水分が足りないと血液が濃くなり、かたまりができやすくなります。トイレを気にして水を控えるのが、いちばん危険です。",
+ say:"水を、コップ一杯飲みましょう。トイレを気にして控えないでください。",
+ svg:art('<path class="s" d="M116 46 L128 146 L188 146 L200 46 Z"/>'+
+  '<path class="a" d="M124 92 q16 10 32 0 q16 -10 32 0 L188 146 L128 146 Z" fill="rgba(77,212,192,.16)"/>'+
+  '<path class="s" d="M110 46 L206 46"/><path class="a" d="M242 44 q14 18 0 28 q-14 -10 0 -28"/>'+
+  '<path class="a" d="M258 82 q10 13 0 20 q-10 -7 0 -20"/>'+
+  '<text x="222" y="132" fill="'+C.flow+'" font-size="17" font-family="sans-serif" font-weight="700">200ml</text>')},
+{id:"breath",name:"深呼吸と肩まわし",dose:"各10回",
+ how:"鼻から4秒吸って、口から8秒かけて吐きます。あわせて肩を大きく回してください。呼吸が深くなると、静脈の血液が心臓へ戻りやすくなります。",
+ say:"深呼吸をしましょう。鼻から4秒吸って、口から8秒かけて吐きます。肩も大きく回してください。",
+ svg:art('<circle class="fs" cx="160" cy="40" r="13"/><path class="s" d="M160 54 L160 132"/>'+
+  '<path class="s" d="M112 78 L160 66 L208 78"/><path class="a" d="M126 62 q-16 -14 -2 -26 q14 -10 26 4"/>'+
+  '<path class="a" d="M194 62 q16 -14 2 -26 q-14 -10 -26 4"/>'+
+  '<path class="ar" d="M160 96 q-30 8 -30 34"/><path class="ar" d="M160 96 q30 8 30 34"/>'+
+  '<text x="34" y="150" fill="'+C.sig+'" font-size="16" font-family="sans-serif" font-weight="700">吸う4秒</text>'+
+  '<text x="216" y="150" fill="'+C.flow+'" font-size="16" font-family="sans-serif" font-weight="700">吐く8秒</text>')}
+];
+
+/* ---------- 状態 ---------- */
+var running=false,totalMs=0,lastTick=0,sinceAlert=0,intervalMin=60;
+var voiceOn=true,sessionCount=0,alertOpen=false,menuIdx=0,pendingId=null;
+var CIRC=2*Math.PI*86, tickTimer=null, audioCtx=null;
+var $=function(id){ return document.getElementById(id); };
+var ringFg=$("ringFg"), pulseDot=$("pulseDot"), ringContent=$("ringContent");
+
+/* ---------- 音 ---------- */
+function beep(){
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==="suspended") audioCtx.resume();
+    [0,0.22,0.44].forEach(function(t,i){
+      var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type="sine"; o.frequency.value=i===2?1046:784;
+      g.gain.setValueAtTime(0,audioCtx.currentTime+t);
+      g.gain.linearRampToValueAtTime(0.28,audioCtx.currentTime+t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+t+0.19);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(audioCtx.currentTime+t); o.stop(audioCtx.currentTime+t+0.2);
+    });
+  }catch(e){}
+}
+function say(text){
+  if(!voiceOn||!("speechSynthesis" in window)) return;
+  try{
+    speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(text); u.lang="ja-JP"; u.rate=0.95;
+    var vs=speechSynthesis.getVoices();
+    for(var i=0;i<vs.length;i++){ if(vs[i].lang&&vs[i].lang.indexOf("ja")===0){ u.voice=vs[i]; break; } }
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function unlockAudio(){ try{
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended") audioCtx.resume();
+  if("speechSynthesis" in window) speechSynthesis.getVoices();
+}catch(e){} }
+
+/* ---------- 表示 ---------- */
+function fmt(ms){var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  var p=function(n){return n<10?"0"+n:""+n;}; return (h>0?h+":":"")+p(m)+":"+p(x);}
+function fmtLeft(ms){var s=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(s/60),x=s%60;
+  return m+"分"+(x<10?"0"+x:x)+"秒";}
+function render(){
+  var iv=intervalMin*60000;
+  if(!running&&totalMs===0){
+    ringContent.innerHTML='<div class="idlemsg">じっとしている時間を計ります。<br>座ったら押してください。</div>';
+    ringFg.setAttribute("stroke-dashoffset",CIRC); pulseDot.setAttribute("r",0); return;
+  }
+  var left=Math.max(0,iv-sinceAlert), ratio=Math.min(1,sinceAlert/iv);
+  ringFg.setAttribute("stroke-dashoffset",CIRC*(1-ratio));
+  ringFg.setAttribute("class","ring-fg"+(ratio>0.8?" warn":""));
+  pulseDot.setAttribute("r",running?5:0);
+  var ang=-Math.PI/2+ratio*2*Math.PI;
+  pulseDot.setAttribute("cx",100+86*Math.cos(ang));
+  pulseDot.setAttribute("cy",100+86*Math.sin(ang));
+  ringContent.innerHTML='<div><div class="lbl">うごかずに</div><div class="elapsed">'+fmt(totalMs)+
+    '</div><div class="nextline">次のお知らせまで <b>'+fmtLeft(left)+'</b></div></div>';
+  $("tallyN").textContent=sessionCount;
+  $("tallyNext").textContent=running?fmtLeft(left):"停止中";
+}
+function tick(){
+  var now=Date.now(), d=now-lastTick; lastTick=now;
+  if(running&&!alertOpen){
+    totalMs+=d; sinceAlert+=d;
+    if(sinceAlert>=intervalMin*60000) fireAlert();
+  }
+  render();
+}
+
+/* ---------- お知らせ ---------- */
+function fireAlert(){
+  alertOpen=true;
+  var ex=MENU[menuIdx%MENU.length]; pendingId=ex.id;
+  $("alertEyebrow").textContent=intervalMin+"分 うごいていません";
+  $("exArt").innerHTML=ex.svg;
+  $("exName").textContent=ex.name;
+  $("exDose").textContent=ex.dose;
+  $("exHow").textContent=ex.how;
+  $("sheetAlert").classList.add("open");
+  beep(); setTimeout(function(){ say("足を動かす時間です。"+ex.say); },900);
+}
+function closeAlert(){ $("sheetAlert").classList.remove("open"); alertOpen=false; lastTick=Date.now(); }
+
+/* ---------- チェックリスト ---------- */
+var picked={};
+function openCheck(){
+  picked={}; if(pendingId) picked[pendingId]=true;
+  var html="";
+  for(var i=0;i<MENU.length;i++){
+    var m=MENU[i];
+    html+='<button class="cl-item" data-id="'+m.id+'" aria-pressed="'+(picked[m.id]?"true":"false")+'">'+
+      '<span class="tick">✓</span><span>'+m.name+'</span></button>';
+  }
+  $("checkList").innerHTML=html; $("sheetCheck").classList.add("open");
+}
+$("checkList").addEventListener("click",function(e){
+  var b=e.target.closest(".cl-item"); if(!b) return;
+  var id=b.getAttribute("data-id"); picked[id]=!picked[id];
+  b.setAttribute("aria-pressed",picked[id]?"true":"false");
+});
+function saveRecord(){
+  var names=[];
+  for(var i=0;i<MENU.length;i++){ if(picked[MENU[i].id]) names.push(MENU[i].name); }
+  var now=new Date(), logs=loadLogs();
+  logs.push({ymd:now.getFullYear()+"-"+(now.getMonth()+1)+"-"+now.getDate(),
+    hm:(now.getHours()<10?"0":"")+now.getHours()+":"+(now.getMinutes()<10?"0":"")+now.getMinutes(),
+    items:names, sat:totalMs});
+  saveLogs(logs); sessionCount++;
+  $("sheetCheck").classList.remove("open");
+  $("nextMsg").textContent=names.length
+    ? names.length+"個の運動を記録しました。じっとしていた時間は "+fmt(totalMs)+" です。"
+    : "記録しました。じっとしていた時間は "+fmt(totalMs)+" です。";
+  $("sheetNext").classList.add("open");
+}
+
+/* ---------- 開始・終了 ---------- */
+function startRun(cont){
+  unlockAudio(); running=true;
+  if(!cont){ totalMs=0; sessionCount=0; }
+  sinceAlert=0; lastTick=Date.now();
+  if(!tickTimer) tickTimer=setInterval(tick,500);
+  $("btnStart").style.display="none"; $("btnComplete").style.display="flex";
+  $("btnStop").style.display="block"; $("setRow").style.display="none";
+  $("tally").style.display="block"; render();
+  say(cont?"計測を続けます。":intervalMin+"分ごとにお知らせします。");
+}
+function stopRun(){
+  running=false; totalMs=0; sinceAlert=0; sessionCount=0; pendingId=null;
+  if(tickTimer){ clearInterval(tickTimer); tickTimer=null; }
+  $("btnStart").style.display="flex"; $("btnComplete").style.display="none";
+  $("btnStop").style.display="none"; $("setRow").style.display="block";
+  $("tally").style.display="none"; render();
+}
+
+/* ---------- 記録 ---------- */
+function openHist(){
+  var logs=loadLogs(), body=$("histBody");
+  if(!logs.length){
+    body.innerHTML='<div class="empty">まだ記録がありません。<br>「はじめる」を押して、<br>最初の1回を記録しましょう。</div>';
+    $("sheetHist").classList.add("open"); return;
+  }
+  var days={},order=[],totalItems=0;
+  for(var i=logs.length-1;i>=0;i--){ var L=logs[i];
+    if(!days[L.ymd]){ days[L.ymd]=[]; order.push(L.ymd); } days[L.ymd].push(L); }
+  for(var j=0;j<logs.length;j++) totalItems+=(logs[j].items?logs[j].items.length:0);
+  var html='<div class="sum"><div><b>'+logs.length+'</b><span>予防した回数</span></div>'+
+    '<div><b>'+order.length+'</b><span>続けた日数</span></div>'+
+    '<div><b>'+totalItems+'</b><span>運動の合計</span></div></div>';
+  for(var k=0;k<order.length;k++){
+    var ymd=order[k], p=ymd.split("-");
+    html+='<div class="day"><div class="day-h"><b>'+p[0]+'年'+p[1]+'月'+p[2]+'日</b><span>'+days[ymd].length+'回</span></div>';
+    for(var n=0;n<days[ymd].length;n++){ var r=days[ymd][n];
+      html+='<div class="rec"><div class="rec-t">'+r.hm+'　じっとしていた時間 '+fmt(r.sat||0)+'</div><div class="tags">';
+      if(r.items&&r.items.length){ for(var q=0;q<r.items.length;q++) html+='<span class="tag">'+r.items[q]+'</span>'; }
+      else html+='<span class="tag">記録のみ</span>';
+      html+='</div></div>';
+    }
+    html+='</div>';
+  }
+  html+='<button class="btn-ghost" id="btnClear" style="width:100%">すべての記録を消す</button>';
+  body.innerHTML=html;
+  $("btnClear").onclick=function(){
+    if(confirm("すべての記録を消します。元に戻せません。よろしいですか。")){ saveLogs([]); openHist(); }
+  };
+  $("sheetHist").classList.add("open");
+}
+
+/* ---------- 共有 ---------- */
+function isLocalFile(){ return location.protocol==="file:"; }
+function shareUrl(){
+  if(SHARE_URL) return SHARE_URL;
+  if(isLocalFile()) return FALLBACK_URL;
+  return location.origin+location.pathname;
+}
+function toast(msg){
+  var t=document.createElement("div");
+  t.textContent=msg;
+  t.style.cssText="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(20,28,40,.96);color:#fff;padding:12px 20px;border-radius:22px;font-size:14px;z-index:200;box-shadow:0 4px 18px rgba(0,0,0,.4);";
+  document.body.appendChild(t);
+  setTimeout(function(){ try{ document.body.removeChild(t); }catch(e){} },2200);
+}
+function copyText(t,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){ toast(msg); },function(){ fallbackCopy(t,msg); });
+  } else fallbackCopy(t,msg);
+}
+function fallbackCopy(t,msg){
+  try{
+    var ta=document.createElement("textarea"); ta.value=t;
+    ta.style.cssText="position:fixed;left:-9999px"; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); document.body.removeChild(ta); toast(msg);
+  }catch(e){ toast("コピーできませんでした"); }
+}
+function openShare(){
+  $("shareUrl").value=shareUrl();
+  $("shareNote").innerHTML = isLocalFile() && !SHARE_URL
+    ? "いまは端末に保存したファイルを開いています。この場合、上のURLは防災情報センターの案内先です。<br>ご自身のサーバーに置いて配る場合は、ファイル内の <b>SHARE_URL</b> にそのURLを設定してください。"
+    : "このURLを開けば、すぐ使えます。アプリのインストールは不要です。";
+  $("sheetShare").classList.add("open");
+}
+
+/* ---------- チュートリアル ---------- */
+var TUT=[
+{i:"🩸",t:"エコノミークラス症候群とは",x:"長い時間おなじ姿勢でいると、足の静脈に血のかたまり（血栓）ができます。それが肺に飛ぶと、命に関わります。車中泊や避難所生活では、実際に亡くなった方が出ています。"},
+{i:"⏱",t:"座ったら「はじめる」",x:"車に乗ったとき、避難所で腰を下ろしたときに押してください。じっとしている時間を数えはじめます。画面を閉じても記録は残りますが、時間の計測はリセットされます。"},
+{i:"🔔",t:"時間がきたら音と声でお知らせ",x:"設定した間隔（はじめは1時間）ごとに、音・音声・イラストでお知らせします。画面を見ていなくても気づけます。いますぐ動けないときは「あと5分だけ待つ」を押してください。"},
+{i:"🦵",t:"8種類の運動を順番にご案内",x:"足首の上下、かかと上げ、足指のグーパー、ふくらはぎさすり、ひざ抱え、歩く、水分補給、深呼吸。イラストと回数つきで、毎回ちがう運動をご案内します。"},
+{i:"✅",t:"やったことを記録する",x:"「動かした」を押すと、何をしたか選べます。記録は日付ごとに残り、上の「📋」から見返せます。そのまま予防を続けるか、終わりにするかを選べます。"},
+{i:"🔗",t:"必要な方へ共有できます",x:"上の「🔗」からURLをコピーできます。車中泊をされている方、ご家族、避難所の運営の方へ送ってください。インストールは不要で、開けばすぐ使えます。"},
+{i:"📶",t:"圏外でも動きます",x:"このツールは通信を使いません。一度開いておけば、電波が届かない場所でもタイマーは動き続けます。記録はこの端末の中だけに保存され、どこにも送信されません。"}
+];
+var tutI=0;
+function tutRender(){
+  var s=TUT[tutI];
+  $("tutNo").textContent="STEP "+(tutI+1)+" / "+TUT.length;
+  $("tutIc").textContent=s.i; $("tutT").textContent=s.t; $("tutX").textContent=s.x;
+  var d=""; for(var i=0;i<TUT.length;i++) d+='<i class="'+(i===tutI?"on":"")+'"></i>';
+  $("tutDots").innerHTML=d;
+  $("tutPrev").style.visibility=tutI===0?"hidden":"visible";
+  $("tutNext").textContent=(tutI===TUT.length-1)?"はじめる":"次へ";
+}
+function tutOpen(){ tutI=0; tutRender(); $("tut").classList.add("open"); }
+function tutGo(d){
+  tutI+=d;
+  if(tutI<0){ tutI=0; return; }
+  if(tutI>=TUT.length){
+    $("tut").classList.remove("open");
+    try{ localStorage.setItem(TUTKEY,"1"); }catch(e){}
+    return;
+  }
+  tutRender();
+}
+
+/* ---------- 操作 ---------- */
+$("btnStart").onclick=function(){ startRun(false); };
+$("btnComplete").onclick=function(){ pendingId=null; openCheck(); };
+$("btnStop").onclick=function(){ if(confirm("計測を終わりにします。よろしいですか。")) stopRun(); };
+$("btnAlertDone").onclick=function(){ closeAlert(); openCheck(); };
+$("btnSnooze").onclick=function(){ closeAlert(); sinceAlert=intervalMin*60000-5*60000; render(); };
+$("checkClose").onclick=function(){ $("sheetCheck").classList.remove("open"); lastTick=Date.now(); };
+$("btnSave").onclick=saveRecord;
+$("btnContinue").onclick=function(){
+  $("sheetNext").classList.remove("open");
+  menuIdx++; pendingId=null; sinceAlert=0; lastTick=Date.now();
+  if(!running) startRun(true); else render();
+};
+$("btnFinish").onclick=function(){ $("sheetNext").classList.remove("open"); stopRun(); };
+$("btnHistory").onclick=openHist;
+$("histClose").onclick=function(){ $("sheetHist").classList.remove("open"); };
+$("btnShare").onclick=openShare;
+$("shareClose").onclick=function(){ $("sheetShare").classList.remove("open"); };
+$("btnCopyUrl").onclick=function(){ copyText(shareUrl(),"URLをコピーしました"); };
+$("btnCopyText").onclick=function(){
+  copyText("【車中泊・避難所の方へ】エコノミークラス症候群（血栓症）の予防タイマーです。\n"+
+    "決まった時間ごとに音と声でお知らせし、足の動かし方をイラストで案内します。\n"+
+    "インストール不要・圏外でも使えます。\n"+shareUrl(),"説明文つきでコピーしました");
+};
+$("btnShareNative").onclick=function(){
+  var d={title:"足うごかしタイマー｜エコノミークラス症候群の予防",
+    text:"車中泊・避難所での血栓予防タイマーです。インストール不要・圏外でも使えます。",url:shareUrl()};
+  if(navigator.share) navigator.share(d).catch(function(){});
+  else copyText(shareUrl(),"URLをコピーしました");
+};
+$("btnTut").onclick=tutOpen;
+$("tutPrev").onclick=function(){ tutGo(-1); };
+$("tutNext").onclick=function(){ tutGo(1); };
+
+var chips=document.querySelectorAll(".chip");
+for(var c=0;c<chips.length;c++){
+  chips[c].onclick=function(){
+    for(var d=0;d<chips.length;d++) chips[d].setAttribute("aria-pressed","false");
+    this.setAttribute("aria-pressed","true");
+    intervalMin=parseInt(this.getAttribute("data-min"),10); render();
+  };
+}
+$("swVoice").onclick=function(){
+  voiceOn=this.getAttribute("aria-pressed")!=="true";
+  this.setAttribute("aria-pressed",voiceOn?"true":"false");
+  if(voiceOn){ unlockAudio(); say("音声でお知らせします。"); }
+  else if("speechSynthesis" in window) speechSynthesis.cancel();
+};
+document.addEventListener("visibilitychange",function(){ if(!document.hidden){ lastTick=Date.now(); tick(); } });
+
+/* ---------- 起動 ---------- */
+if(!storageOK){
+  document.querySelector(".note").innerHTML=
+    "この画面では記録の保存が使えません。<br>ファイルを端末に保存して開くと、記録が残ります。";
+}
+render();
+(function(){
+  var seen=""; try{ seen=localStorage.getItem(TUTKEY)||""; }catch(e){}
+  if(!seen) setTimeout(tutOpen,400);
+})();
+</script>
+</body>
+</html>

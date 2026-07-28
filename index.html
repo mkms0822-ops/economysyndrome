@@ -4,14 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B1220">
-<meta name="description" content="車中泊・避難所でのエコノミークラス症候群（血栓症）を防ぐタイマー。時間がきたら音と声でお知らせし、足の動かし方をイラストで案内します。">
+<meta name="description" content="車中泊・避難所でのエコノミークラス症候群（血栓症）を防ぐタイマー。時間がきたら音と声でお知らせし、足の動かし方をイラストで案内します。インストール不要・圏外でも使えます。">
 <title>足うごかしタイマー｜エコノミークラス症候群の予防</title>
 <style>
-/* ============================================================
-   ★配布するときはここだけ書き換えてください
-   このファイルを置いたURL。空のままでも動きますが、
-   共有ボタンで正しいURLを配るために設定を推奨します。
-   ============================================================ */
 :root{
   --bg:#0B1220; --panel:#141E33; --panel-2:#1B2842; --line:#26344F;
   --ink:#EAF0FA; --ink-mid:#A8B8D4; --ink-dim:#6F82A3;
@@ -51,6 +46,8 @@ button{font-family:inherit; cursor:pointer; border:0;}
 .nextline{font-size:14px; color:var(--ink-mid); font-variant-numeric:tabular-nums;}
 .nextline b{color:var(--flow); font-weight:800;}
 .idlemsg{font-size:15px; color:var(--ink-mid); max-width:190px; margin:0 auto;}
+.wakebadge{display:none; margin-top:8px; font-size:12px; color:var(--signal); font-weight:700;}
+.wakebadge.on{display:block;}
 
 .actions{display:flex; flex-direction:column; gap:10px; margin-top:22px;}
 .btn{border-radius:var(--r); padding:17px 18px; font-size:18px; font-weight:800;
@@ -61,21 +58,35 @@ button{font-family:inherit; cursor:pointer; border:0;}
 .btn:active{filter:brightness(.9);}
 .btn-ghost{background:transparent; color:var(--ink-dim); font-size:15px; font-weight:700; padding:12px; min-height:0;}
 
-.setrow{margin-top:20px; background:var(--panel); border:1px solid var(--line);
+/* アラーム併用のご案内 */
+.alarmcard{margin-top:18px; border-radius:var(--r); border:1px solid var(--signal);
+  background:rgba(245,165,36,.09); padding:16px;}
+.alarmcard h3{margin:0 0 9px; font-size:16px; color:var(--signal); font-weight:800; display:flex; gap:8px; align-items:center;}
+.alarmcard p{margin:0 0 10px; font-size:14px; color:var(--ink-mid); line-height:1.75;}
+.alarmcard p:last-child{margin-bottom:0;}
+.alarmcard strong{color:var(--ink);}
+.alarmcard .why{font-size:13px; color:var(--ink-dim); border-top:1px solid rgba(245,165,36,.25); padding-top:10px; margin-top:10px;}
+
+.setrow{margin-top:16px; background:var(--panel); border:1px solid var(--line);
   border-radius:var(--r); padding:14px 16px;}
 .setrow h3{margin:0 0 10px; font-size:13px; color:var(--ink-dim); font-weight:700; letter-spacing:.1em;}
 .chips{display:flex; gap:8px;}
 .chip{flex:1; background:var(--panel-2); color:var(--ink-mid); border:1px solid var(--line);
   border-radius:10px; padding:11px 4px; font-size:15px; font-weight:700;}
 .chip[aria-pressed="true"]{background:var(--flow); color:#062B26; border-color:var(--flow);}
-.toggle{display:flex; align-items:center; justify-content:space-between; margin-top:12px;
+.toggle{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-top:12px;
   padding-top:12px; border-top:1px solid var(--line); font-size:15px; color:var(--ink-mid);}
-.sw{width:52px; height:30px; border-radius:999px; background:var(--panel-2);
+.toggle:first-of-type{margin-top:0; padding-top:0; border-top:none;}
+.toggle .tl{flex:1; min-width:0;}
+.toggle .tl b{display:block; color:var(--ink); font-size:15px; font-weight:700;}
+.toggle .tl span{display:block; font-size:12px; color:var(--ink-dim); line-height:1.65; margin-top:3px;}
+.sw{width:52px; height:30px; border-radius:999px; background:var(--panel-2); margin-top:2px;
   border:1px solid var(--line); position:relative; transition:background .2s; flex:0 0 52px;}
 .sw::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px;
   border-radius:50%; background:var(--ink-dim); transition:.2s;}
 .sw[aria-pressed="true"]{background:var(--flow); border-color:var(--flow);}
 .sw[aria-pressed="true"]::after{left:25px; background:#062B26;}
+.sw[disabled]{opacity:.35;}
 
 .tally{margin-top:16px; background:var(--panel); border:1px solid var(--line);
   border-radius:var(--r); padding:14px 16px; font-size:14px; color:var(--ink-mid);}
@@ -142,11 +153,13 @@ button{font-family:inherit; cursor:pointer; border:0;}
 .tut.open{display:flex;}
 .tut-in{width:100%; max-width:400px; background:var(--panel); border:1px solid var(--flow);
   border-radius:18px; padding:26px 22px; box-shadow:0 0 44px rgba(77,212,192,.16);}
+.tut-in.warn{border-color:var(--signal); box-shadow:0 0 44px rgba(245,165,36,.18);}
 .tut-no{font-size:11px; letter-spacing:.2em; color:var(--flow); font-weight:800; margin-bottom:14px;}
+.tut-in.warn .tut-no{color:var(--signal);}
 .tut-ic{font-size:46px; text-align:center; margin-bottom:14px;}
 .tut-t{font-size:20px; font-weight:800; margin:0 0 12px; text-align:center; line-height:1.4;}
 .tut-x{font-size:15px; color:var(--ink-mid); line-height:1.9; margin:0 0 20px;}
-.tut-dots{display:flex; gap:7px; justify-content:center; margin-bottom:18px;}
+.tut-dots{display:flex; gap:6px; justify-content:center; margin-bottom:18px; flex-wrap:wrap;}
 .tut-dots i{width:8px; height:8px; border-radius:50%; background:var(--panel-2); border:1px solid var(--line);}
 .tut-dots i.on{background:var(--flow); border-color:var(--flow);}
 .tut-btns{display:flex; gap:9px;}
@@ -181,6 +194,7 @@ button{font-family:inherit; cursor:pointer; border:0;}
         <div class="idlemsg">じっとしている時間を計ります。<br>座ったら押してください。</div>
       </div></div>
     </div>
+    <div class="wakebadge" id="wakeBadge">🔆 画面を消さない設定で動作中</div>
   </section>
 
   <div class="actions">
@@ -189,6 +203,14 @@ button{font-family:inherit; cursor:pointer; border:0;}
     <button class="btn-ghost" id="btnStop" style="display:none">今日はここまでにする</button>
   </div>
 
+  <!-- ★アラーム併用のご案内 -->
+  <section class="alarmcard">
+    <h3>⏰ 目覚ましアラームも一緒に</h3>
+    <p><strong>スマホの時計アプリで、1時間ごとの繰り返しアラームをセットしてください。</strong></p>
+    <p>このタイマーは、鳴ったときに<strong>「何をすればいいか」を見るため</strong>にお使いください。2つを組み合わせるのが、いちばん確実です。</p>
+    <p class="why">スマホは、画面を消したり他のアプリに切り替えたりすると、このページの動きを止めてしまいます（電池を守るための仕組みです）。眠ってしまったときに起こせるのは、標準のアラームだけです。</p>
+  </section>
+
   <section class="setrow" id="setRow">
     <h3>お知らせの間隔</h3>
     <div class="chips" role="group" aria-label="お知らせの間隔">
@@ -196,9 +218,22 @@ button{font-family:inherit; cursor:pointer; border:0;}
       <button class="chip" data-min="60" aria-pressed="true">1時間</button>
       <button class="chip" data-min="90" aria-pressed="false">1時間半</button>
     </div>
-    <div class="toggle">
-      <span>音声でお知らせ</span>
+    <div class="toggle" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <div class="tl"><b>音声でお知らせ</b><span>声で運動の名前を読み上げます</span></div>
       <button class="sw" id="swVoice" aria-pressed="true" aria-label="音声でお知らせ"></button>
+    </div>
+  </section>
+
+  <!-- ★背面対策 -->
+  <section class="setrow" id="bgRow">
+    <h3>画面を消しても気づけるように</h3>
+    <div class="toggle">
+      <div class="tl"><b>画面を消さない</b><span id="wakeDesc">タイマー中は画面がついたままになります。電池を多く使うので、充電できるときに。</span></div>
+      <button class="sw" id="swWake" aria-pressed="false" aria-label="画面を消さない"></button>
+    </div>
+    <div class="toggle">
+      <div class="tl"><b>通知でお知らせ</b><span id="notifDesc">他のアプリを使っていても、通知が表示されます。</span></div>
+      <button class="sw" id="swNotif" aria-pressed="false" aria-label="通知でお知らせ"></button>
     </div>
   </section>
 
@@ -287,7 +322,7 @@ button{font-family:inherit; cursor:pointer; border:0;}
 
 <!-- チュートリアル -->
 <div class="tut" id="tut" role="dialog" aria-modal="true">
-  <div class="tut-in">
+  <div class="tut-in" id="tutIn">
     <div class="tut-no" id="tutNo"></div>
     <div class="tut-ic" id="tutIc"></div>
     <h2 class="tut-t" id="tutT"></h2>
@@ -305,18 +340,18 @@ button{font-family:inherit; cursor:pointer; border:0;}
 
 /* ============================================================
    ★配布用の設定 ── ここだけ書き換えてください
-   このファイルを置いたURLを入れると、共有ボタンがそれを配ります。
-   空のままでも動きます（表示中のURLを使います）。
    ============================================================ */
 var SHARE_URL = "";                                  // 例: "https://bousai0111.info/ashi.html"
 var FALLBACK_URL = "https://bousai0111.info/?ecs=1"; // 手元のファイルから開いたときの案内先
 
 /* ---------- 保存 ---------- */
-var KEY = "ashi_ugokashi_v1", TUTKEY = "ashi_tut_seen_v1";
-var memFallback = null;
-var storageOK = (function(){ try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; }catch(e){ return false; } })();
+var KEY="ashi_ugokashi_v1", TUTKEY="ashi_tut_seen_v2", PREFKEY="ashi_pref_v1";
+var memFallback=null;
+var storageOK=(function(){ try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; }catch(e){ return false; } })();
 function loadLogs(){ if(!storageOK) return memFallback||[]; try{ return JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ return []; } }
-function saveLogs(a){ if(!storageOK){ memFallback=a; return; } try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){ memFallback=a; } }
+function saveLogs(a){ if(!storageOK){ memFallback=a; return; } try{ localStorage.setItem(KEY,JSON.stringify(a)); }catch(e){ memFallback=a; } }
+function loadPref(){ try{ return JSON.parse(localStorage.getItem(PREFKEY)||"{}"); }catch(e){ return {}; } }
+function savePref(o){ try{ localStorage.setItem(PREFKEY,JSON.stringify(o)); }catch(e){} }
 
 /* ---------- 運動メニュー ---------- */
 var C={ink:"#A8B8D4",flow:"#4DD4C0",sig:"#F5A524",dim:"#3C4C6B"};
@@ -402,8 +437,70 @@ var MENU=[
 var running=false,totalMs=0,lastTick=0,sinceAlert=0,intervalMin=60;
 var voiceOn=true,sessionCount=0,alertOpen=false,menuIdx=0,pendingId=null;
 var CIRC=2*Math.PI*86, tickTimer=null, audioCtx=null;
+var wakeWant=false, wakeLock=null, notifWant=false;
 var $=function(id){ return document.getElementById(id); };
 var ringFg=$("ringFg"), pulseDot=$("pulseDot"), ringContent=$("ringContent");
+
+/* ============================================================
+   ① 画面を消さない（Screen Wake Lock）
+   ============================================================ */
+var WAKE_OK = ("wakeLock" in navigator);
+function wakeAcquire(){
+  if(!WAKE_OK || !wakeWant || !running) return;
+  try{
+    navigator.wakeLock.request("screen").then(function(lock){
+      wakeLock = lock;
+      $("wakeBadge").classList.add("on");
+      lock.addEventListener("release", function(){
+        wakeLock = null;
+        if(!(wakeWant && running)) $("wakeBadge").classList.remove("on");
+      });
+    }).catch(function(){
+      $("wakeDesc").textContent = "この端末では使えませんでした。目覚ましアラームをお使いください。";
+    });
+  }catch(e){}
+}
+function wakeRelease(){
+  try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){}
+  $("wakeBadge").classList.remove("on");
+}
+
+/* ============================================================
+   ② 通知でお知らせ（Notifications API）
+   ============================================================ */
+var NOTIF_OK = ("Notification" in window);
+function notifTest(){
+  // 端末によっては Notification の直接生成ができないため、実際に出して確かめる
+  try{
+    var n = new Notification("お知らせを設定しました", {
+      body: "この形でお知らせします。", tag: "ashi-test", silent: true
+    });
+    setTimeout(function(){ try{ n.close(); }catch(e){} }, 3000);
+    return true;
+  }catch(e){ return false; }
+}
+function notifShow(title, body){
+  if(!notifWant || !NOTIF_OK || Notification.permission!=="granted") return;
+  try{
+    var n = new Notification(title, { body: body, tag: "ashi-alert", renotify: true });
+    n.onclick = function(){ try{ window.focus(); n.close(); }catch(e){} };
+  }catch(e){}
+}
+function notifEnable(cb){
+  if(!NOTIF_OK){ cb(false, "この端末では通知が使えません。"); return; }
+  if(Notification.permission==="denied"){
+    cb(false, "通知がブロックされています。ブラウザの設定から許可してください。"); return;
+  }
+  var go=function(p){
+    if(p!=="granted"){ cb(false,"通知が許可されませんでした。"); return; }
+    if(notifTest()) cb(true,"他のアプリを使っていても、通知が表示されます。");
+    else cb(false,"この端末（ブラウザ）では通知を出せませんでした。目覚ましアラームをお使いください。");
+  };
+  try{
+    var r = Notification.requestPermission(go);
+    if(r && typeof r.then==="function") r.then(go);
+  }catch(e){ cb(false,"通知を設定できませんでした。"); }
+}
 
 /* ---------- 音 ---------- */
 function beep(){
@@ -473,13 +570,16 @@ function tick(){
 function fireAlert(){
   alertOpen=true;
   var ex=MENU[menuIdx%MENU.length]; pendingId=ex.id;
-  $("alertEyebrow").textContent=intervalMin+"分 うごいていません";
+  var mins=Math.floor(sinceAlert/60000);
+  $("alertEyebrow").textContent=mins+"分 うごいていません";
   $("exArt").innerHTML=ex.svg;
   $("exName").textContent=ex.name;
   $("exDose").textContent=ex.dose;
   $("exHow").textContent=ex.how;
   $("sheetAlert").classList.add("open");
-  beep(); setTimeout(function(){ say("足を動かす時間です。"+ex.say); },900);
+  beep();
+  notifShow("足を動かす時間です（"+mins+"分経過）", ex.name+"　"+ex.dose);
+  setTimeout(function(){ say("足を動かす時間です。"+ex.say); },900);
 }
 function closeAlert(){ $("sheetAlert").classList.remove("open"); alertOpen=false; lastTick=Date.now(); }
 
@@ -524,11 +624,13 @@ function startRun(cont){
   $("btnStart").style.display="none"; $("btnComplete").style.display="flex";
   $("btnStop").style.display="block"; $("setRow").style.display="none";
   $("tally").style.display="block"; render();
+  wakeAcquire();
   say(cont?"計測を続けます。":intervalMin+"分ごとにお知らせします。");
 }
 function stopRun(){
   running=false; totalMs=0; sinceAlert=0; sessionCount=0; pendingId=null;
   if(tickTimer){ clearInterval(tickTimer); tickTimer=null; }
+  wakeRelease();
   $("btnStart").style.display="flex"; $("btnComplete").style.display="none";
   $("btnStop").style.display="none"; $("setRow").style.display="block";
   $("tally").style.display="none"; render();
@@ -577,9 +679,9 @@ function shareUrl(){
 function toast(msg){
   var t=document.createElement("div");
   t.textContent=msg;
-  t.style.cssText="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(20,28,40,.96);color:#fff;padding:12px 20px;border-radius:22px;font-size:14px;z-index:200;box-shadow:0 4px 18px rgba(0,0,0,.4);";
+  t.style.cssText="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(20,28,40,.96);color:#fff;padding:12px 20px;border-radius:22px;font-size:14px;z-index:200;max-width:88%;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.4);";
   document.body.appendChild(t);
-  setTimeout(function(){ try{ document.body.removeChild(t); }catch(e){} },2200);
+  setTimeout(function(){ try{ document.body.removeChild(t); }catch(e){} },2600);
 }
 function copyText(t,msg){
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -604,18 +706,21 @@ function openShare(){
 /* ---------- チュートリアル ---------- */
 var TUT=[
 {i:"🩸",t:"エコノミークラス症候群とは",x:"長い時間おなじ姿勢でいると、足の静脈に血のかたまり（血栓）ができます。それが肺に飛ぶと、命に関わります。車中泊や避難所生活では、実際に亡くなった方が出ています。"},
-{i:"⏱",t:"座ったら「はじめる」",x:"車に乗ったとき、避難所で腰を下ろしたときに押してください。じっとしている時間を数えはじめます。画面を閉じても記録は残りますが、時間の計測はリセットされます。"},
-{i:"🔔",t:"時間がきたら音と声でお知らせ",x:"設定した間隔（はじめは1時間）ごとに、音・音声・イラストでお知らせします。画面を見ていなくても気づけます。いますぐ動けないときは「あと5分だけ待つ」を押してください。"},
+{i:"⏰",t:"まず目覚ましをセットしてください",x:"スマホの時計アプリで、1時間ごとの繰り返しアラームをかけてください。このタイマーは、鳴ったときに「何をすればいいか」を見るためのものです。2つを組み合わせるのが、いちばん確実です。",warn:true},
+{i:"📵",t:"画面を消すと止まります",x:"スマホは、画面を消したり他のアプリに切り替えたりすると、このページの動きを止めます（電池を守るための仕組みで、避けられません）。ただし時間の記録は残るので、画面に戻った瞬間に「◯分うごいていません」とお知らせします。",warn:true},
+{i:"🔆",t:"気づきやすくする設定",x:"「画面を消さない」をオンにすると、タイマー中は画面がついたままになります。電池を多く使うので、充電できるときにお使いください。「通知でお知らせ」をオンにすると、他のアプリを使っていても通知が出ます。"},
+{i:"⏱",t:"座ったら「はじめる」",x:"車に乗ったとき、避難所で腰を下ろしたときに押してください。じっとしている時間を数えはじめます。"},
 {i:"🦵",t:"8種類の運動を順番にご案内",x:"足首の上下、かかと上げ、足指のグーパー、ふくらはぎさすり、ひざ抱え、歩く、水分補給、深呼吸。イラストと回数つきで、毎回ちがう運動をご案内します。"},
 {i:"✅",t:"やったことを記録する",x:"「動かした」を押すと、何をしたか選べます。記録は日付ごとに残り、上の「📋」から見返せます。そのまま予防を続けるか、終わりにするかを選べます。"},
 {i:"🔗",t:"必要な方へ共有できます",x:"上の「🔗」からURLをコピーできます。車中泊をされている方、ご家族、避難所の運営の方へ送ってください。インストールは不要で、開けばすぐ使えます。"},
-{i:"📶",t:"圏外でも動きます",x:"このツールは通信を使いません。一度開いておけば、電波が届かない場所でもタイマーは動き続けます。記録はこの端末の中だけに保存され、どこにも送信されません。"}
+{i:"📶",t:"圏外でも動きます",x:"このツールは通信を使いません。一度開いておけば、電波が届かない場所でも使えます。記録はこの端末の中だけに保存され、どこにも送信されません。"}
 ];
 var tutI=0;
 function tutRender(){
   var s=TUT[tutI];
   $("tutNo").textContent="STEP "+(tutI+1)+" / "+TUT.length;
   $("tutIc").textContent=s.i; $("tutT").textContent=s.t; $("tutX").textContent=s.x;
+  $("tutIn").className="tut-in"+(s.warn?" warn":"");
   var d=""; for(var i=0;i<TUT.length;i++) d+='<i class="'+(i===tutI?"on":"")+'"></i>';
   $("tutDots").innerHTML=d;
   $("tutPrev").style.visibility=tutI===0?"hidden":"visible";
@@ -681,15 +786,70 @@ $("swVoice").onclick=function(){
   if(voiceOn){ unlockAudio(); say("音声でお知らせします。"); }
   else if("speechSynthesis" in window) speechSynthesis.cancel();
 };
-document.addEventListener("visibilitychange",function(){ if(!document.hidden){ lastTick=Date.now(); tick(); } });
+
+/* ---- ①画面を消さない ---- */
+$("swWake").onclick=function(){
+  if(!WAKE_OK){ toast("この端末では使えません"); return; }
+  wakeWant = this.getAttribute("aria-pressed")!=="true";
+  this.setAttribute("aria-pressed", wakeWant?"true":"false");
+  var pf=loadPref(); pf.wake=wakeWant; savePref(pf);
+  if(wakeWant){ wakeAcquire(); toast("タイマー中は画面がつきっぱなしになります"); }
+  else { wakeRelease(); toast("画面を消さない設定をオフにしました"); }
+};
+
+/* ---- ②通知 ---- */
+$("swNotif").onclick=function(){
+  var el=this;
+  var on = el.getAttribute("aria-pressed")!=="true";
+  if(!on){
+    notifWant=false; el.setAttribute("aria-pressed","false");
+    var pf0=loadPref(); pf0.notif=false; savePref(pf0);
+    $("notifDesc").textContent="他のアプリを使っていても、通知が表示されます。";
+    toast("通知をオフにしました"); return;
+  }
+  notifEnable(function(ok,msg){
+    notifWant=ok;
+    el.setAttribute("aria-pressed", ok?"true":"false");
+    $("notifDesc").textContent=msg;
+    var pf=loadPref(); pf.notif=ok; savePref(pf);
+    if(!ok) toast(msg);
+  });
+};
+
+/* ---- 画面に戻ったとき ---- */
+document.addEventListener("visibilitychange",function(){
+  if(!document.hidden){
+    lastTick=Date.now();
+    tick();
+    if(wakeWant && running && !wakeLock) wakeAcquire();
+  }
+});
+window.addEventListener("pagehide",function(){ wakeRelease(); });
 
 /* ---------- 起動 ---------- */
-if(!storageOK){
-  document.querySelector(".note").innerHTML=
-    "この画面では記録の保存が使えません。<br>ファイルを端末に保存して開くと、記録が残ります。";
-}
-render();
-(function(){
+(function init(){
+  // 使えない機能はスイッチを無効化して、正直に理由を出す
+  if(!WAKE_OK){
+    $("swWake").setAttribute("disabled","disabled");
+    $("wakeDesc").textContent="この端末（ブラウザ）では使えません。目覚ましアラームをお使いください。";
+  }
+  if(!NOTIF_OK){
+    $("swNotif").setAttribute("disabled","disabled");
+    $("notifDesc").textContent="この端末（ブラウザ）では通知が使えません。目覚ましアラームをお使いください。";
+  } else if(Notification.permission==="denied"){
+    $("notifDesc").textContent="通知がブロックされています。ブラウザの設定から許可すると使えます。";
+  }
+  // 前回の設定を復元
+  var pf=loadPref();
+  if(pf.wake && WAKE_OK){ wakeWant=true; $("swWake").setAttribute("aria-pressed","true"); }
+  if(pf.notif && NOTIF_OK && Notification.permission==="granted"){
+    notifWant=true; $("swNotif").setAttribute("aria-pressed","true");
+  }
+  if(!storageOK){
+    document.querySelector(".note").innerHTML=
+      "この画面では記録の保存が使えません。<br>ファイルを端末に保存して開くと、記録が残ります。";
+  }
+  render();
   var seen=""; try{ seen=localStorage.getItem(TUTKEY)||""; }catch(e){}
   if(!seen) setTimeout(tutOpen,400);
 })();
